@@ -77,7 +77,7 @@ class SlowHTTPTest {
 
   bool init(const char* url, const char* verb,
     const char* path, const char* proxy,
-    const char* content_type, const char* accept, const char* cookie);
+    const char* content_type, const char* accept, const char* cookie, const char* custom_headers);
   void report_parameters();
   void report_status(bool to_csv);
   void report_csv();
@@ -88,10 +88,10 @@ class SlowHTTPTest {
   void close_sock(int id);
   bool change_fd_limits();
   const char* get_random_extra();
- 
-  static bool resolve_addr(const char* host, 
+
+  static bool resolve_addr(const char* host,
     const char* port, addrinfo **addr, bool is_ipv6=false);
-   
+
   RandomTextGenerator textgen_;
   addrinfo* addr_;
   addrinfo* probe_proxy_addr_;
@@ -100,6 +100,7 @@ class SlowHTTPTest {
   std::string random_extra_;
   std::string verb_;
   std::string cookie_;
+  std::string custom_headers_;
   std::string user_agent_;
   std::string content_type_;
   std::string accept_;
@@ -129,9 +130,9 @@ class SlowHTTPTest {
   std::vector<StatsDumper*> dumpers_;
   ExitStatusType exit_status_;
   int initializing_;
-  int connecting_; 
-  int connected_; 
-  int errored_; 
+  int connecting_;
+  int connected_;
+  int errored_;
   int closed_;
   int extra_data_max_len_total_;
   int read_interval_;

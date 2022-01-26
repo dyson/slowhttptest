@@ -85,16 +85,17 @@ static void usage() {
       "  -p seconds       timeout to wait for HTTP response on probe connection,\n"
       "                   after which server is considered inaccessible (5)\n"
       "  -j cookies       value of Cookie header (ex.: -j \"user_id=1001; timeout=9000\")\n"
+      "  -q headers       custom headers separated by '\\r\\n'\n"
       "\nRange attack specific options:\n\n"
-      "  -a start        left boundary of range in range header (5)\n"
-      "  -b bytes        limit for range header right boundary values (2000)\n"
+      "  -a start         left boundary of range in range header (5)\n"
+      "  -b bytes         limit for range header right boundary values (2000)\n"
       "\nSlow read specific options:\n\n"
-      "  -k num          number of times to repeat same request in the connection. Use to\n"
-      "                  multiply response size if server supports persistent connections (1)\n"
-      "  -n seconds      interval between read operations from recv buffer in seconds (1)\n"
-      "  -w bytes        start of the range advertised window size would be picked from (1)\n"
-      "  -y bytes        end of the range advertised window size would be picked from (512)\n"
-      "  -z bytes        bytes to slow read from receive buffer with single read() call (5)\n"
+      "  -k num           number of times to repeat same request in the connection. Use to\n"
+      "                   multiply response size if server supports persistent connections (1)\n"
+      "  -n seconds       interval between read operations from recv buffer in seconds (1)\n"
+      "  -w bytes         start of the range advertised window size would be picked from (1)\n"
+      "  -y bytes         end of the range advertised window size would be picked from (512)\n"
+      "  -z bytes         bytes to slow read from receive buffer with single read() call (5)\n"
       );
 }
 
@@ -128,7 +129,7 @@ static bool parse_int(int &val, long max = INT_MAX) {
 int g_running = true;
 
 void int_handler(int param) {
-  g_running = false;  
+  g_running = false;
 }
 
 using slowhttptest::slowlog_init;
@@ -150,6 +151,7 @@ int main(int argc, char **argv) {
   char content_type[1024] = { 0 };
   char accept[1024] = { 0 };
   char cookie[1024] = { 0 };
+  char custom_headers[1024] = { 0 };
   // default values
   int conn_cnt            = 50;
   int content_length      = 4096;
@@ -171,7 +173,7 @@ int main(int argc, char **argv) {
   ProxyType proxy_type = slowhttptest::eNoProxy;
   long tmp;
   int o;
-  while((o = getopt(argc, argv, ":HBRXgha:b:c:d:e:f:i:j:k:l:m:n:o:p:r:s:t:u:v:w:x:y:z:")) != -1) {
+  while((o = getopt(argc, argv, ":HBRXgha:b:c:d:e:f:i:j:k:l:m:n:o:p:q:r:s:t:u:v:w:x:y:z:")) != -1) {
     switch (o) {
       case 'a':
         if(!parse_int(range_start, 65539))
@@ -248,6 +250,9 @@ int main(int argc, char **argv) {
         if(!parse_int(probe_interval))
           return -1;
         break;
+      case 'q':
+        strncpy(custom_headers, optarg, 1023);
+        break;
       case 'r':
         if(!parse_int(rate))
           return -1;
@@ -305,7 +310,7 @@ int main(int argc, char **argv) {
     info();
     return -1;
   }
-  if(slowhttptest::eSlowRead == type 
+  if(slowhttptest::eSlowRead == type
       && !check_window_range(window_lower_limit, window_upper_limit))
     return -1;
   if(!strlen(url)) {
@@ -320,7 +325,7 @@ int main(int argc, char **argv) {
       type, need_stats, pipeline_factor, probe_interval,
       range_start, range_limit, read_interval, read_len,
       window_lower_limit, window_upper_limit, proxy_type, debug_level));
-  if(!slow_test->init(url, verb, path, proxy, content_type, accept, cookie)) {
+  if(!slow_test->init(url, verb, path, proxy, content_type, accept, cookie, custom_headers)) {
     slowlog(LOG_FATAL, "%s: error setting up slow HTTP test\n", __FUNCTION__);
     return -1;
   } else if(!slow_test->run_test()) {

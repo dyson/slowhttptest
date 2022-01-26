@@ -64,7 +64,7 @@ static const char* exit_status_msg[] = {
     "Cancelled by user",
     "Unexpected error"
 };
-// update ProxyType too 
+// update ProxyType too
 static const char* proxy_type_name[] = {
     "HTTP proxy at ",
     "HTTP tunnel at ",
@@ -92,10 +92,10 @@ static const char* user_agents[] = {
     "Mozilla/5.0 (Macintosh; Intel Mac OS X) AppleWebKit/534.34 (KHTML,like Gecko) PhantomJS/1.9.0 (development) Safari/534.34",
     "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0; SLCC2)"
 };
-static const char referer[] = 
+static const char referer[] =
     "Referer: TESTING_PURPOSES_ONLY\r\n";
 static const char content_type_default[] = "Content-Type: application/x-www-form-urlencoded\r\n";
-static const char accept_default[] = "Accept: text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n"; 
+static const char accept_default[] = "Accept: text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5\r\n";
 static const char post_request[] = "Connection: close\r\n"
     "\r\n"
     "foo=bar";
@@ -113,11 +113,11 @@ static const char peer_closed[] = "Peer closed connection";
 }  // namespace
 
 namespace slowhttptest {
-SlowHTTPTest::SlowHTTPTest(int delay, int duration, 
+SlowHTTPTest::SlowHTTPTest(int delay, int duration,
                            int interval, int con_cnt,
                            int max_random_data_len,
                            int content_length, SlowTestType type,
-                           bool need_stats, int pipeline_factor, 
+                           bool need_stats, int pipeline_factor,
                            int probe_interval,
                            int range_start, int range_limit,
                            int read_interval, int read_len,
@@ -215,10 +215,10 @@ const char* SlowHTTPTest::get_random_extra() {
 
 bool SlowHTTPTest::init(const char* url, const char* verb,
     const char* path, const char* proxy,
-    const char* content_type, const char* accept, const char* cookie) {
+    const char* content_type, const char* accept, const char* cookie, const char* custom_headers) {
   if(!change_fd_limits()) {
     slowlog(LOG_INFO, "error setting open file limits\n");
-    
+
   }
   if(!base_uri_.prepare(url)) {
     slowlog(LOG_FATAL, "Error parsing URL\n");
@@ -227,7 +227,7 @@ bool SlowHTTPTest::init(const char* url, const char* verb,
   if(eNoProxy == proxy_type_) {
     if(!resolve_addr(base_uri_.getHost().c_str(), base_uri_.getPortStr(), &addr_, base_uri_.isLiteralIPv6())) {
       return false;
-    } 
+    }
   } else {
     if(base_uri_.isSSL()) {
       slowlog(LOG_FATAL, "TLS/SSL connections through proxy are not supported yet.\n");
@@ -249,7 +249,7 @@ bool SlowHTTPTest::init(const char* url, const char* verb,
           }
           if(!resolve_addr(base_uri_.getHost().c_str(), proxy_.getPortStr(), &probe_proxy_addr_)) {
             return false;
-          } 
+          }
         }
       }
     } else {
@@ -340,6 +340,12 @@ bool SlowHTTPTest::init(const char* url, const char* verb,
     request_.append(cookie_);
     request_.append(crlf);
   }
+  // Custom headers
+  if (custom_headers != 0 && strlen(custom_headers)) {
+    custom_headers_.append(custom_headers);
+    request_.append(custom_headers_);
+    request_.append(crlf);
+  }
   // method for probe is always GET
   probe_request_.append("GET");
   if(eProbeProxy == proxy_type_) {
@@ -379,8 +385,8 @@ bool SlowHTTPTest::init(const char* url, const char* verb,
     char csv_file_name[1024] = {0};
     char html_file_name[1024] = {0};
     if(path && strlen(path)) {
-      sprintf(csv_file_name, "%s.csv", path);  
-      sprintf(html_file_name, "%s.html", path);  
+      sprintf(csv_file_name, "%s.csv", path);
+      sprintf(html_file_name, "%s.html", path);
     } else {
       time_t rawtime;
       struct tm * timeinfo;
@@ -392,7 +398,7 @@ bool SlowHTTPTest::init(const char* url, const char* verb,
     csv_report_.append(csv_file_name);
     html_report_.append(html_file_name);
     char test_info[1024];
-    if(eSlowRead != test_type_) { 
+    if(eSlowRead != test_type_) {
       sprintf(test_info,"<table class='slow_results' border='0'>"
           "<tr><th>Test parameters</th></tr>"
           "<tr><td><b>Test type</b></td><td>%s</td></tr>"
@@ -400,6 +406,7 @@ bool SlowHTTPTest::init(const char* url, const char* verb,
           "<tr><td><b>Verb</b></td><td>%s</td></tr>"
           "<tr><td><b>Content-Length header value</b></td><td>%d</td></tr>"
           "<tr><td><b>Cookie</b></td><td>%s</td></tr>"
+          "<tr><td><b>Custom headers</b></td><td>%s</td></tr>"
           "<tr><td><b>Extra data max length</b></td><td>%d</td></tr>"
           "<tr><td><b>Interval between follow up data</b></td><td>%d seconds</td></tr>"
           "<tr><td><b>Connections per seconds</b></td><td>%d</td></tr>"
@@ -412,6 +419,7 @@ bool SlowHTTPTest::init(const char* url, const char* verb,
           verb_.c_str(),
           content_length_,
           cookie,
+          custom_headers,
           extra_data_max_len_total_,
           followup_timing_,
           delay_,
@@ -426,6 +434,7 @@ bool SlowHTTPTest::init(const char* url, const char* verb,
           "<tr><td><b>Test type</b></td><td>%s</td></tr>"
           "<tr><td><b>Number of connections</b></td><td>%d</td></tr>"
           "<tr><td><b>Cookie</b></td><td>%s</td></tr>"
+          "<tr><td><b>Custom headers</b></td><td>%s</td></tr>"
           "<tr><td><b>Receive window range</b></td><td>%d - %d</td></tr>"
           "<tr><td><b>Pipeline factor</b></td><td>%d</td></tr>"
           "<tr><td><b>Read rate from receive buffer</b></td><td>%d bytes / %d sec</td></tr>"
@@ -437,6 +446,7 @@ bool SlowHTTPTest::init(const char* url, const char* verb,
           test_type_name[test_type_],
           num_connections_,
           cookie,
+          custom_headers,
           window_lower_limit_,
           window_upper_limit_,
           pipeline_factor_,
@@ -450,7 +460,7 @@ bool SlowHTTPTest::init(const char* url, const char* verb,
           );
     }
 
-    dumpers_.push_back(new HTMLDumper(html_file_name, base_uri_.getData(), 
+    dumpers_.push_back(new HTMLDumper(html_file_name, base_uri_.getData(),
         test_info));
     dumpers_.push_back(new CSVDumper(csv_file_name,
         "Seconds,Closed,Pending,Connected,Service Available\n"));
@@ -490,13 +500,14 @@ void SlowHTTPTest::report_parameters() {
       slowlog(LOG_INFO, "\x1b[H\x1b[2J");
   }
   if(eSlowRead != test_type_) {
-      slowlog(LOG_INFO, "\n\t" cLCY PACKAGE " version " VERSION 
+      slowlog(LOG_INFO, "\n\t" cLCY PACKAGE " version " VERSION
       "\n - https://github.com/shekyan/slowhttptest -\n"
       cBLU "test type:" cLBL "                        %s\n"
       cBLU "number of connections:" cLBL "            %d\n"
       cBLU "URL:" cLBL "                              %s\n"
       cBLU "verb:" cLBL "                             %s\n"
       cBLU "cookie:" cLBL "                           %s\n"
+      cBLU "custom headers:" cLBL "                   %s\n"
       cBLU "Content-Length header value:" cLBL "      %d\n"
       cBLU "follow up data max size:" cLBL "          %d\n"
       cBLU "interval between follow up data:" cLBL "  %d seconds\n"
@@ -509,6 +520,7 @@ void SlowHTTPTest::report_parameters() {
         base_uri_.getData(),
         verb_.c_str(),
         cookie_.c_str(),
+        custom_headers_.c_str(),
         content_length_,
         extra_data_max_len_total_,
         followup_timing_,
@@ -519,13 +531,14 @@ void SlowHTTPTest::report_parameters() {
         proxy_type_ == eNoProxy ? " " : proxy_.getData()
       );
   } else { // slow read
-    slowlog(LOG_INFO, "\n\t" cLCY PACKAGE " version " VERSION 
+    slowlog(LOG_INFO, "\n\t" cLCY PACKAGE " version " VERSION
       "\n - https://github.com/shekyan/slowhttptest -\n"
       cBLU "test type:" cLBL "                       %s\n"
       cBLU "number of connections:" cLBL "           %d\n"
       cBLU "URL:" cLBL "                             %s\n"
       cBLU "verb:" cLBL "                            %s\n"
-      cBLU "cookie:" cLBL"                           %s\n"
+      cBLU "cookie:" cLBL "                          %s\n"
+      cBLU "custom_headers:" cLBL "                  %s\n"
       cBLU "receive window range:" cLBL "            %d - %d\n"
       cBLU "pipeline factor:" cLBL "                 %d\n"
       cBLU "read rate from receive buffer:" cLBL "   %d bytes / %d sec\n"
@@ -538,6 +551,7 @@ void SlowHTTPTest::report_parameters() {
         base_uri_.getData(),
         verb_.c_str(),
         cookie_.c_str(),
+        custom_headers_.c_str(),
         window_lower_limit_,
         window_upper_limit_,
         pipeline_factor_,
@@ -554,9 +568,9 @@ void SlowHTTPTest::report_parameters() {
 
 void SlowHTTPTest::report_status(bool to_stats) {
   initializing_ = 0;
-  connecting_ = 0; 
-  connected_ = 0; 
-  errored_ = 0; 
+  connecting_ = 0;
+  connected_ = 0;
+  errored_ = 0;
   closed_ = 0;
 
   std::vector<SlowSocket*>::iterator it;
@@ -590,7 +604,7 @@ void SlowHTTPTest::report_status(bool to_stats) {
   if(to_stats) {
     for (uint i = 0; i < dumpers_.size(); ++i) {
       dumpers_[i]->WriteStats("%d,%d,%d,%d,%d",
-          seconds_passed_, 
+          seconds_passed_,
           closed_,
           connecting_,
           connected_,
@@ -636,10 +650,10 @@ bool SlowHTTPTest::resolve_addr(const char* host, const char* port, addrinfo  **
 
 bool SlowHTTPTest::run_test() {
   int num_connected = 0;
-#ifdef HAVE_POLL  
-  pollfd *fds = new pollfd[num_connections_ + 1]; // +1 for probe socket 
+#ifdef HAVE_POLL
+  pollfd *fds = new pollfd[num_connections_ + 1]; // +1 for probe socket
   memset(fds, 0, sizeof(pollfd) * (num_connections_ + 1));
-  const int timeout = 1000; // constant 1 second timeout for poll 
+  const int timeout = 1000; // constant 1 second timeout for poll
 #else
   fd_set readfds, writefds;
   timeval timeout;
@@ -648,19 +662,19 @@ bool SlowHTTPTest::run_test() {
   int maxfd = 0;
   int result = 0;
   int ret = 0;
-  timeval now, start, progress_timer, 
+  timeval now, start, progress_timer,
           tv_delay;
 
   // connection rate per second
   tv_delay.tv_sec = 0;
-  tv_delay.tv_usec = 1000000 / delay_; 
+  tv_delay.tv_usec = 1000000 / delay_;
   int active_sock_num;
   bool is_any_ever_connected = false;
   char buf[kBufSize];
   const char* extra_data;
   int heartbeat_reported = 1; //trick to print 0 sec hb
   int stats_reported = 1; //trick to print 0 sec hb
-  int probe_taken = -1; // connect probe every second 
+  int probe_taken = -1; // connect probe every second
   int connection_timeout = followup_timing_;
   timerclear(&now);
   timerclear(&progress_timer);
@@ -671,7 +685,7 @@ bool SlowHTTPTest::run_test() {
   while(true) {
     int wr = 0;
     seconds_passed_ = progress_timer.tv_sec;
-#ifndef HAVE_POLL  
+#ifndef HAVE_POLL
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
 #endif
@@ -797,7 +811,7 @@ bool SlowHTTPTest::run_test() {
     if(seconds_passed_ > duration_) { // hit time limit
       exit_status_ = eTimeLimit;
       break;
-    } 
+    }
     if(active_sock_num == 0) { //no open connections left
       if(!is_any_ever_connected) {
         exit_status_ = eConnectionRefused;
@@ -1007,7 +1021,7 @@ bool SlowHTTPTest::run_test() {
         }
       }
     }
-    
+
     if(num_connected < num_connections_) {
       // throttle down conenction rate, assume connect() returned immediately
       usleep(tv_delay.tv_usec);
